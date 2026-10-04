@@ -12,7 +12,8 @@ import {
 
 import {
   catalog,
-  initialState
+  initialState,
+  shuffledIndexes
 } from "./core/games.js";
 
 
@@ -27,29 +28,225 @@ const screens = [
 
 const reactions = ["❤️", "😂", "😭", "😡", "👏"];
 
+const STORAGE_ROOMS = "gameRoom.savedRooms.v1";
+const STORAGE_THEME = "gameRoom.theme.v1";
+
+
+/* --------------------------------------------------
+   WOULD YOU RATHER QUESTION BANK
+
+   These are kept in one place so adding more later
+   is easy.
+
+   The game stores only the shuffled question indexes
+   in Firebase, so both players always see the same
+   sequence.
+-------------------------------------------------- */
+
 const questions = [
-  ["Always be 10 minutes late", "Always be 20 minutes early"],
-  ["Explore space", "Explore the deep ocean"],
-  ["Give up music for a year", "Give up movies for a year"],
-  ["Have unlimited travel", "Have unlimited food delivery"],
-  ["Know every language", "Play every instrument"],
-  ["Live by the beach", "Live in the mountains"],
-  ["Only text for a week", "Only voice-call for a week"],
-  ["Rewatch a favorite", "Try something completely new"],
-  ["Have a pause button", "Have a rewind button"],
-  ["Plan every trip", "Travel completely spontaneously"],
-  ["Always know the weather", "Always know the traffic"],
-  ["Have breakfast for every meal", "Never eat breakfast food again"],
-  ["Visit the past", "Visit the future"],
+  ["Explore space", "Explore the deepest parts of the ocean"],
+  ["Always arrive 20 minutes early", "Always arrive 10 minutes late"],
   ["Be able to fly", "Be able to breathe underwater"],
+  ["Visit the past", "Visit the future"],
+  ["Know every language", "Play every musical instrument"],
+  ["Live beside the ocean", "Live in the mountains"],
   ["Have a personal chef", "Have a personal driver"],
-  ["Live without music", "Live without movies"],
   ["Always have perfect Wi-Fi", "Always have a fully charged phone"],
-  ["Travel somewhere new every month", "Return to your favorite place every month"],
+  ["Read minds", "See ten minutes into the future"],
+  ["Have unlimited travel", "Have unlimited restaurant meals"],
+
+  ["Pause time for everyone except yourself", "Rewind your own life by ten minutes"],
+  ["Remember everything you read", "Remember every conversation you have"],
+  ["Never need sleep", "Never need to wait in a queue"],
+  ["Have four-day weekends forever", "Have six-hour workdays forever"],
+  ["Always find the perfect parking spot", "Never encounter traffic"],
+  ["Own a beautiful house in one place", "Travel continuously with no permanent home"],
+  ["Spend a year travelling the world", "Spend a year living in your dream city"],
+  ["Take a spontaneous trip", "Plan the perfect trip months ahead"],
+  ["Travel only by train", "Travel only by boat"],
+  ["See the northern lights", "See a total solar eclipse"],
+
+  ["Have breakfast food for every meal", "Never eat breakfast food again"],
+  ["Give up desserts for a year", "Give up fried food for a year"],
+  ["Only eat sweet food for a week", "Only eat savoury food for a week"],
+  ["Cook every meal yourself", "Eat every meal at a restaurant"],
+  ["Have unlimited coffee or tea", "Have unlimited desserts"],
+  ["Never eat your favourite food again", "Only eat your favourite food once a month"],
+  ["Try a completely unfamiliar dish", "Order your reliable favourite"],
+  ["Eat dinner very early", "Eat dinner very late"],
+  ["Give up fizzy drinks forever", "Give up fast food forever"],
+  ["Have the world's best pizza", "Have the world's best burger"],
+
+  ["Give up music for a year", "Give up films and series for a year"],
+  ["Only watch new films", "Only rewatch favourites"],
+  ["Attend every concert you want", "Attend every sporting event you want"],
+  ["Meet your favourite musician", "Meet your favourite actor"],
+  ["Listen to one song repeatedly for a day", "Have no music for a week"],
+  ["Watch a film at home", "Watch it at the cinema"],
+  ["Know the ending before every film", "Never be able to rewatch a film"],
+  ["Have front-row concert seats", "Have backstage access after the show"],
+  ["Lose access to streaming video", "Lose access to streaming music"],
+  ["Be inside your favourite film world", "Be inside your favourite game world"],
+
+  ["Always say exactly what you think", "Never be able to explain what you really think"],
+  ["Be incredibly funny", "Be incredibly charming"],
+  ["Have five very close friends", "Have fifty casual friends"],
+  ["Host every gathering", "Never have to organise a gathering"],
+  ["Spend a weekend completely alone", "Spend a weekend surrounded by friends"],
+  ["Be famous but have little privacy", "Be unknown but completely free"],
+  ["Always win arguments", "Never have another argument"],
+  ["Receive the perfect gift", "Give someone the perfect gift"],
+  ["Know what everyone thinks of you", "Never know what anyone thinks of you"],
+  ["Be the best storyteller", "Be the best listener"],
+
+  ["Live without social media", "Live without online shopping"],
+  ["Use only voice calls for a week", "Use only text messages for a week"],
+  ["Have a phone with unlimited battery", "Have a phone with unlimited storage"],
+  ["Lose your phone for a week", "Lose internet access for a week"],
+  ["Use an old phone forever", "Use an old computer forever"],
+  ["Never receive spam calls", "Never receive spam email"],
+  ["Have instant internet everywhere", "Have free electricity everywhere"],
+  ["Give up your camera", "Give up your headphones"],
+  ["Always type perfectly", "Always remember every password"],
+  ["Have every app free", "Have every subscription free"],
+
   ["Be extremely lucky", "Be extremely talented"],
-  ["Read minds", "See ten minutes into the future"]
+  ["Know exactly what career suits you", "Know exactly where you should live"],
+  ["Have more money", "Have more free time"],
+  ["Master one skill instantly", "Become good at ten skills gradually"],
+  ["Work on something you love for less money", "Work an easy job for much more money"],
+  ["Retire very early with a simple lifestyle", "Work longer with a luxurious lifestyle"],
+  ["Have perfect focus", "Have endless creativity"],
+  ["Always make the right decision", "Always recover quickly from a wrong decision"],
+  ["Know your future career", "Keep it completely surprising"],
+  ["Be excellent at public speaking", "Be excellent at writing"],
+
+  ["Wake up naturally at sunrise", "Stay awake comfortably until sunrise"],
+  ["Always have perfect weather on weekends", "Always have perfect weather while travelling"],
+  ["Never feel too hot", "Never feel too cold"],
+  ["Live where it rains often", "Live where it almost never rains"],
+  ["Have a garden you maintain yourself", "Have a balcony requiring no maintenance"],
+  ["Own many things you love", "Own very few things but travel more"],
+  ["Have a huge bedroom", "Have a huge kitchen"],
+  ["Live on the top floor", "Live on the ground floor with a garden"],
+  ["Have an amazing view", "Have an amazing location"],
+  ["Always live near family", "Always live near your closest friends"],
+
+  ["Have a pet dog", "Have a pet cat"],
+  ["Understand animals", "Speak every human language"],
+  ["Spend a day with dolphins", "Spend a day with elephants"],
+  ["See a rare animal in the wild", "Discover a new species"],
+  ["Have a tiny friendly dragon", "Have a giant friendly bird"],
+  ["Be able to talk to your pet", "Know exactly what your pet is feeling"],
+  ["Live near a forest", "Live near a lake"],
+  ["Go camping in the mountains", "Camp beside the sea"],
+  ["Watch sunrise from a mountain", "Watch sunset from a beach"],
+  ["Explore a rainforest", "Explore a desert"],
+
+  ["Have one extra hour every day", "Have one extra day every month"],
+  ["Repeat your favourite day once", "Skip your worst day once"],
+  ["Freeze time for one hour", "Go back one hour"],
+  ["Know what happens tomorrow", "Know what happens one year from now"],
+  ["Relive one childhood day", "Preview one future day"],
+  ["Never forget a happy memory", "Forget every embarrassing memory"],
+  ["Be able to make any moment feel slower", "Make boring moments pass instantly"],
+  ["Always know the exact time without a clock", "Always know exactly how long something will take"],
+  ["Have a three-day weekend every week", "Have one entire month off every year"],
+  ["Live a very long ordinary life", "Live a shorter extraordinary life"],
+
+  ["Play a board game", "Play a video game"],
+  ["Win through strategy", "Win through luck"],
+  ["Always get the first move", "Always get one extra move at the end"],
+  ["Be unbeatable at chess", "Be unbeatable at every card game"],
+  ["Play one long competitive game", "Play ten quick games"],
+  ["Know every game's rules instantly", "Become great at any game after playing once"],
+  ["Play cooperatively", "Play competitively"],
+  ["Lose a close exciting game", "Win an easy boring game"],
+  ["Create a new game", "Master an existing game"],
+  ["Always roll the number you want", "Always draw the card you want"],
+
+  ["Receive a handwritten letter", "Receive a surprise package"],
+  ["Plan a surprise for someone", "Be surprised yourself"],
+  ["Have someone cook your favourite meal", "Cook their favourite meal for them"],
+  ["Spend an evening talking", "Spend an evening doing an activity together"],
+  ["Share every hobby", "Have completely different hobbies"],
+  ["Take lots of photos together", "Rarely take photos but remember the moments"],
+  ["Always choose the activity", "Always choose the food"],
+  ["Celebrate small occasions", "Save celebrations for major occasions"],
+  ["Go somewhere familiar together", "Discover somewhere completely new together"],
+  ["Have an unforgettable adventure", "Have a perfectly relaxing day"],
+
+  ["Be able to teleport anywhere", "Be able to stop time"],
+  ["Have invisibility", "Have super speed"],
+  ["Have super strength", "Have perfect memory"],
+  ["Control the weather", "Communicate with animals"],
+  ["Never get lost", "Never forget anything"],
+  ["Know when someone is lying", "Be impossible to lie to"],
+  ["Be able to instantly learn", "Be able to instantly teach"],
+  ["Have a photographic memory", "Have perfect intuition"],
+  ["Change your appearance at will", "Change your voice at will"],
+  ["Travel through space instantly", "Travel through time once"],
+
+  ["Have a library room", "Have a home cinema"],
+  ["Have a swimming pool", "Have a rooftop terrace"],
+  ["Have a beautiful kitchen", "Have a beautiful garden"],
+  ["Have a home gym", "Have a gaming room"],
+  ["Have a tiny home in a perfect location", "Have a mansion far from everything"],
+  ["Have someone clean your home", "Have someone cook every meal"],
+  ["Never wash dishes again", "Never do laundry again"],
+  ["Always have fresh flowers at home", "Always have your favourite snacks at home"],
+  ["Have perfect natural light", "Have perfect temperature all year"],
+  ["Live somewhere peaceful", "Live somewhere exciting"],
+
+  ["Learn something new every day", "Create something new every day"],
+  ["Read one hundred books a year", "Watch one hundred great films a year"],
+  ["Become fluent in a new language", "Become excellent at a new instrument"],
+  ["Learn photography", "Learn painting"],
+  ["Write a book", "Make a film"],
+  ["Become an amazing cook", "Become an amazing dancer"],
+  ["Learn extremely quickly", "Never forget what you learn"],
+  ["Have endless motivation", "Have endless patience"],
+  ["Be naturally organised", "Be naturally spontaneous"],
+  ["Always finish what you start", "Always know which things are worth starting"],
+
+  ["Find hidden treasure", "Discover a secret place"],
+  ["Spend a night in a castle", "Spend a night under the stars"],
+  ["Take a hot-air balloon ride", "Take a helicopter ride"],
+  ["Explore an ancient city", "Explore a futuristic city"],
+  ["Go on a road trip with no destination", "Take a perfectly planned luxury holiday"],
+  ["Travel first class once", "Travel economy for free forever"],
+  ["Have free hotels forever", "Have free flights forever"],
+  ["Visit every country", "Know one country incredibly well"],
+  ["Travel somewhere snowy", "Travel somewhere tropical"],
+  ["See every famous landmark", "Find amazing places few tourists know"],
+
+  ["Always have the perfect comeback", "Never be insulted"],
+  ["Laugh at the wrong moment", "Forget someone's name immediately after meeting them"],
+  ["Wear slightly overdressed clothes everywhere", "Wear slightly underdressed clothes everywhere"],
+  ["Always have a song stuck in your head", "Always have an itch you cannot locate"],
+  ["Only whisper for a day", "Only shout for an hour"],
+  ["Have to dance whenever music plays", "Have to sing whenever you hear your favourite song"],
+  ["Always sneeze twice", "Always hiccup once after laughing"],
+  ["Have socks that are always slightly wet", "Have sleeves that are always slightly too long"],
+  ["Accidentally send a message too early", "Accidentally leave someone on read"],
+  ["Always forget why you entered a room", "Always forget where you put your phone"],
+
+  ["Know the answer to any factual question", "Know the solution to any practical problem"],
+  ["Be able to fix anything", "Be able to cook anything"],
+  ["Have perfect handwriting", "Type incredibly fast"],
+  ["Always wake up refreshed", "Fall asleep instantly"],
+  ["Never feel bored", "Never feel stressed"],
+  ["Have perfect balance", "Have perfect coordination"],
+  ["Always remember names", "Always remember faces"],
+  ["Have unlimited confidence", "Have unlimited patience"],
+  ["Always know what to say", "Always know when to stay quiet"],
+  ["Be great at starting conversations", "Be great at ending awkward conversations"]
 ];
 
+
+/* --------------------------------------------------
+   APP STATE
+-------------------------------------------------- */
 
 let room = null;
 let roomCode = null;
@@ -67,22 +264,30 @@ let selectedGame = null;
 
 const show = id => {
   screens.forEach(screen => {
-    $("#" + screen).classList.toggle("hidden", screen !== id);
+    $("#" + screen)
+      .classList
+      .toggle(
+        "hidden",
+        screen !== id
+      );
   });
 };
 
-const toast = text => {
-  const el = $("#toast");
 
-  el.textContent = text;
-  el.classList.remove("hidden");
+const toast = text => {
+  const element = $("#toast");
+
+  element.textContent = text;
+  element.classList.remove("hidden");
 
   clearTimeout(toast.timer);
 
-  toast.timer = setTimeout(() => {
-    el.classList.add("hidden");
-  }, 1900);
+  toast.timer =
+    setTimeout(() => {
+      element.classList.add("hidden");
+    }, 1900);
 };
+
 
 const makeCode = () =>
   Math.random()
@@ -90,28 +295,314 @@ const makeCode = () =>
     .slice(2, 8)
     .toUpperCase();
 
+
 const cleanName = value =>
   (value || "")
     .trim()
     .slice(0, 18);
 
+
 function roomRef(path = "") {
   return ref(
     db,
-    `rooms/${roomCode}${path ? "/" + path : ""}`
+    `rooms/${roomCode}${
+      path
+        ? "/" + path
+        : ""
+    }`
   );
 }
 
+
 function other(slot = mySlot) {
-  return slot === "A" ? "B" : "A";
+  return slot === "A"
+    ? "B"
+    : "A";
 }
+
 
 function playerName(slot) {
-  return room?.players?.[slot]?.name || `Player ${slot}`;
+  return (
+    room?.players?.[slot]?.name ||
+    `Player ${slot}`
+  );
 }
 
+
 function gameById(id) {
-  return catalog.find(game => game.id === id);
+  return catalog.find(
+    game => game.id === id
+  );
+}
+
+
+/* --------------------------------------------------
+   THEME
+-------------------------------------------------- */
+
+function loadTheme() {
+  let theme =
+    localStorage.getItem(
+      STORAGE_THEME
+    );
+
+  if (
+    theme !== "light" &&
+    theme !== "dark"
+  ) {
+    theme =
+      window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      ).matches
+        ? "dark"
+        : "light";
+  }
+
+  applyTheme(theme);
+}
+
+
+function applyTheme(theme) {
+  document.documentElement
+    .setAttribute(
+      "data-theme",
+      theme
+    );
+
+  localStorage.setItem(
+    STORAGE_THEME,
+    theme
+  );
+
+  $("#themeBtn").textContent =
+    theme === "dark"
+      ? "☀️"
+      : "🌙";
+
+  $("#themeBtn").title =
+    theme === "dark"
+      ? "Light mode"
+      : "Dark mode";
+
+  $("#themeBtn").setAttribute(
+    "aria-label",
+    theme === "dark"
+      ? "Switch to light mode"
+      : "Switch to dark mode"
+  );
+}
+
+
+function toggleTheme() {
+  const current =
+    document.documentElement
+      .getAttribute(
+        "data-theme"
+      );
+
+  applyTheme(
+    current === "dark"
+      ? "light"
+      : "dark"
+  );
+}
+
+
+/* --------------------------------------------------
+   SAVED ROOMS
+-------------------------------------------------- */
+
+function getSavedRooms() {
+  try {
+    const parsed =
+      JSON.parse(
+        localStorage.getItem(
+          STORAGE_ROOMS
+        ) || "[]"
+      );
+
+    return Array.isArray(parsed)
+      ? parsed
+      : [];
+  }
+
+  catch {
+    return [];
+  }
+}
+
+
+function setSavedRooms(rooms) {
+  localStorage.setItem(
+    STORAGE_ROOMS,
+    JSON.stringify(rooms)
+  );
+
+  renderSavedRooms();
+}
+
+
+function rememberRoom() {
+  if (!roomCode) return;
+
+  const rooms =
+    getSavedRooms();
+
+  const entry = {
+    code: roomCode,
+
+    playerA:
+      room?.players?.A?.name ||
+      "",
+
+    playerB:
+      room?.players?.B?.name ||
+      "",
+
+    lastSlot:
+      mySlot || "",
+
+    updatedAt:
+      Date.now()
+  };
+
+
+  const filtered =
+    rooms.filter(
+      item =>
+        item.code !== roomCode
+    );
+
+
+  filtered.unshift(entry);
+
+  /*
+    There is no real need for dozens of
+    old rooms on a phone.
+
+    Keeping the latest 20 also prevents
+    localStorage from becoming cluttered.
+  */
+  setSavedRooms(
+    filtered.slice(0, 20)
+  );
+}
+
+
+function removeSavedRoom(code) {
+  const rooms =
+    getSavedRooms()
+      .filter(
+        item =>
+          item.code !== code
+      );
+
+  setSavedRooms(rooms);
+}
+
+
+function renderSavedRooms() {
+  const rooms =
+    getSavedRooms();
+
+  const section =
+    $("#savedRoomsSection");
+
+  const mount =
+    $("#savedRooms");
+
+
+  if (!rooms.length) {
+    section.classList.add(
+      "hidden"
+    );
+
+    mount.innerHTML = "";
+
+    return;
+  }
+
+
+  section.classList.remove(
+    "hidden"
+  );
+
+
+  mount.innerHTML =
+    rooms.map(item => {
+
+      const names =
+        [
+          item.playerA,
+          item.playerB
+        ]
+          .filter(Boolean)
+          .join(" · ");
+
+
+      return `
+        <div class="saved-room">
+
+          <div class="saved-room-main">
+
+            <button
+              data-open-room="${item.code}"
+            >
+
+              <span class="saved-room-title">
+                🎮 Room ${item.code}
+              </span>
+
+              <span class="saved-room-meta">
+                ${
+                  names ||
+                  "Previously joined room"
+                }
+              </span>
+
+              <span class="saved-room-meta saved-room-open">
+                Open room →
+              </span>
+
+            </button>
+
+          </div>
+
+
+          <button
+            class="saved-room-remove"
+            data-remove-room="${item.code}"
+            aria-label="Remove room ${item.code} from this device"
+            title="Forget this room"
+          >
+            ✕
+          </button>
+
+        </div>
+      `;
+    }).join("");
+}
+
+
+async function openSavedRoom(code) {
+  nickname =
+    cleanName(
+      $("#nickname").value
+    );
+
+  if (!nickname) {
+    return landingMessage(
+      "Enter your nickname first, then open the saved room."
+    );
+  }
+
+  roomCode =
+    code.toUpperCase();
+
+  $("#roomCode").value =
+    roomCode;
+
+  await joinStart();
 }
 
 
@@ -120,20 +611,30 @@ function gameById(id) {
 -------------------------------------------------- */
 
 async function boot() {
-  await login();
+  loadTheme();
 
   renderTiles();
   renderReactions();
+  renderSavedRooms();
+
+  await login();
+
 
   const inviteCode =
-    new URLSearchParams(location.search).get("room");
+    new URLSearchParams(
+      location.search
+    ).get("room");
+
 
   if (inviteCode) {
     $("#roomCode").value =
       inviteCode.toUpperCase();
   }
 
-  if ("serviceWorker" in navigator) {
+
+  if (
+    "serviceWorker" in navigator
+  ) {
     navigator.serviceWorker
       .register("./sw.js")
       .catch(() => {});
@@ -153,38 +654,51 @@ function renderTiles() {
         data-game="${game.id}"
         aria-label="${game.name}"
       >
-        <span class="emoji">${game.emoji}</span>
-        <b>${game.name}</b>
+        <span class="emoji">
+          ${game.emoji}
+        </span>
+
+        <b>
+          ${game.name}
+        </b>
       </button>
     `).join("");
 }
 
 
 function openGameInfo(gameId) {
-  const game = gameById(gameId);
+  const game =
+    gameById(gameId);
 
   if (!game) return;
 
-  selectedGame = gameId;
+  selectedGame =
+    gameId;
 
-  $("#gameInfoEmoji").textContent =
-    game.emoji;
+  $("#gameInfoEmoji")
+    .textContent =
+      game.emoji;
 
-  $("#gameInfoTitle").textContent =
-    game.name;
+  $("#gameInfoTitle")
+    .textContent =
+      game.name;
 
-  $("#gameInfoDescription").textContent =
-    game.subtitle;
+  $("#gameInfoDescription")
+    .textContent =
+      game.subtitle;
 
-  $("#gameInfoRules").textContent =
-    game.rules;
+  $("#gameInfoRules")
+    .textContent =
+      game.rules;
 
-  $("#gameInfoDialog").showModal();
+  $("#gameInfoDialog")
+    .showModal();
 }
 
 
 function closeGameInfo() {
-  $("#gameInfoDialog").close();
+  $("#gameInfoDialog")
+    .close();
 }
 
 
@@ -193,26 +707,35 @@ function closeGameInfo() {
 -------------------------------------------------- */
 
 function renderReactions() {
-  for (const id of [
-    "lobbyReactions",
-    "gameReactions"
-  ]) {
+  for (
+    const id of [
+      "lobbyReactions",
+      "gameReactions"
+    ]
+  ) {
     $("#" + id).innerHTML =
-      reactions.map(emoji => `
-        <button
-          class="reaction"
-          data-reaction="${emoji}"
-          aria-label="Send ${emoji}"
-        >
-          ${emoji}
-        </button>
-      `).join("");
+      reactions.map(
+        emoji => `
+          <button
+            class="reaction"
+            data-reaction="${emoji}"
+            aria-label="Send ${emoji}"
+          >
+            ${emoji}
+          </button>
+        `
+      ).join("");
   }
 }
 
 
 async function react(emoji) {
-  if (!roomCode || !mySlot) return;
+  if (
+    !roomCode ||
+    !mySlot
+  ) {
+    return;
+  }
 
   await set(
     roomRef("reaction"),
@@ -226,12 +749,46 @@ async function react(emoji) {
 
 
 /* --------------------------------------------------
+   COLLISION-SAFE ROOM CODE
+-------------------------------------------------- */
+
+async function createUniqueRoomCode() {
+  for (
+    let attempt = 0;
+    attempt < 12;
+    attempt++
+  ) {
+    const candidate =
+      makeCode();
+
+    const snapshot =
+      await get(
+        ref(
+          db,
+          `rooms/${candidate}`
+        )
+      );
+
+    if (!snapshot.exists()) {
+      return candidate;
+    }
+  }
+
+  throw new Error(
+    "Could not generate a unique room code. Please try again."
+  );
+}
+
+
+/* --------------------------------------------------
    ROOM CREATION / JOINING
 -------------------------------------------------- */
 
 async function createRoom() {
   nickname =
-    cleanName($("#nickname").value);
+    cleanName(
+      $("#nickname").value
+    );
 
   if (!nickname) {
     return landingMessage(
@@ -239,59 +796,100 @@ async function createRoom() {
     );
   }
 
-  roomCode = makeCode();
-  mySlot = "A";
 
-  const data = {
-    createdAt: Date.now(),
-
-    players: {
-      A: {
-        uid: auth.currentUser.uid,
-        name: nickname,
-        online: true,
-        lastSeen: Date.now()
-      },
-      B: ""
-    },
-
-    challenge: "",
-
-    activeGame: "",
-
-    stats: {
-      A: {
-        wins: 0
-      },
-      B: {
-        wins: 0
-      },
-      draws: 0,
-      total: 0,
-      byGame: {}
-    },
-
-    reaction: ""
-  };
-
-  await set(
-    roomRef(),
-    data
+  landingMessage(
+    "Creating room…"
   );
 
-  await enterRoom();
+
+  try {
+    roomCode =
+      await createUniqueRoomCode();
+
+    mySlot = "A";
+
+
+    const data = {
+      createdAt:
+        Date.now(),
+
+      players: {
+        A: {
+          uid:
+            auth.currentUser.uid,
+
+          name:
+            nickname,
+
+          online:
+            true,
+
+          lastSeen:
+            Date.now()
+        },
+
+        B: ""
+      },
+
+      challenge: "",
+
+      activeGame: "",
+
+      stats: {
+        A: {
+          wins: 0
+        },
+
+        B: {
+          wins: 0
+        },
+
+        draws: 0,
+
+        total: 0,
+
+        byGame: {}
+      },
+
+      reaction: ""
+    };
+
+
+    await set(
+      roomRef(),
+      data
+    );
+
+    room = data;
+
+    rememberRoom();
+
+    landingMessage("");
+
+    await enterRoom();
+  }
+
+  catch (error) {
+    landingMessage(
+      "Could not create room: " +
+      error.message
+    );
+  }
 }
 
 
 async function joinStart() {
   nickname =
-    cleanName($("#nickname").value);
+    cleanName(
+      $("#nickname").value
+    );
 
   roomCode =
     $("#roomCode")
       .value
       .trim()
       .toUpperCase();
+
 
   if (
     !nickname ||
@@ -302,24 +900,44 @@ async function joinStart() {
     );
   }
 
+
   const snapshot =
-    await get(roomRef());
+    await get(
+      roomRef()
+    );
+
 
   if (!snapshot.exists()) {
+    /*
+      If a remembered room was later
+      deleted from Firebase, remove it
+      from this phone automatically.
+    */
+    removeSavedRoom(
+      roomCode
+    );
+
     return landingMessage(
       "Room not found."
     );
   }
 
-  room = snapshot.val();
 
-  $("#slotAName").textContent =
-    room.players?.A?.name ||
-    "Available";
+  room =
+    snapshot.val();
 
-  $("#slotBName").textContent =
-    room.players?.B?.name ||
-    "Available";
+
+  $("#slotAName")
+    .textContent =
+      room.players?.A?.name ||
+      "Available";
+
+
+  $("#slotBName")
+    .textContent =
+      room.players?.B?.name ||
+      "Available";
+
 
   show("slotScreen");
 }
@@ -327,7 +945,10 @@ async function joinStart() {
 
 async function claimSlot(slot) {
   const snapshot =
-    await get(roomRef());
+    await get(
+      roomRef()
+    );
+
 
   if (!snapshot.exists()) {
     return toast(
@@ -335,16 +956,20 @@ async function claimSlot(slot) {
     );
   }
 
+
   const currentRoom =
     snapshot.val();
 
   const existing =
     currentRoom.players?.[slot];
 
+
   if (
     existing &&
-    typeof existing === "object" &&
-    existing.uid !== auth.currentUser.uid &&
+    typeof existing ===
+      "object" &&
+    existing.uid !==
+      auth.currentUser.uid &&
     existing.online
   ) {
     return toast(
@@ -352,17 +977,30 @@ async function claimSlot(slot) {
     );
   }
 
-  mySlot = slot;
+
+  mySlot =
+    slot;
+
 
   await set(
-    roomRef(`players/${slot}`),
+    roomRef(
+      `players/${slot}`
+    ),
     {
-      uid: auth.currentUser.uid,
-      name: nickname,
-      online: true,
-      lastSeen: Date.now()
+      uid:
+        auth.currentUser.uid,
+
+      name:
+        nickname,
+
+      online:
+        true,
+
+      lastSeen:
+        Date.now()
     }
   );
+
 
   await enterRoom();
 }
@@ -375,34 +1013,48 @@ async function enterRoom() {
     `${location.pathname}?room=${roomCode}`
   );
 
+
   await onDisconnect(
     roomRef(
       `players/${mySlot}/online`
     )
   ).set(false);
 
+
   if (unsub) {
     unsub();
   }
 
-  unsub = onValue(
-    roomRef(),
-    snapshot => {
-      if (!snapshot.exists()) return;
 
-      room = snapshot.val();
+  unsub =
+    onValue(
+      roomRef(),
+      snapshot => {
 
-      renderRoom();
-    }
-  );
+        if (
+          !snapshot.exists()
+        ) {
+          return;
+        }
+
+        room =
+          snapshot.val();
+
+        rememberRoom();
+
+        renderRoom();
+      }
+    );
+
 
   show("lobby");
 }
 
 
 function landingMessage(text) {
-  $("#landingMsg").textContent =
-    text;
+  $("#landingMsg")
+    .textContent =
+      text;
 }
 
 
@@ -411,22 +1063,31 @@ function landingMessage(text) {
 -------------------------------------------------- */
 
 function renderRoom() {
-  $("#roomLabel").textContent =
-    roomCode;
+  $("#roomLabel")
+    .textContent =
+      roomCode;
 
-  $("#playerA").textContent =
-    room.players?.A?.name ||
-    "Waiting…";
 
-  $("#playerB").textContent =
-    room.players?.B?.name ||
-    "Waiting…";
+  $("#playerA")
+    .textContent =
+      room.players?.A?.name ||
+      "Waiting…";
 
-  $("#scoreA").textContent =
-    room.stats?.A?.wins || 0;
 
-  $("#scoreB").textContent =
-    room.stats?.B?.wins || 0;
+  $("#playerB")
+    .textContent =
+      room.players?.B?.name ||
+      "Waiting…";
+
+
+  $("#scoreA")
+    .textContent =
+      room.stats?.A?.wins || 0;
+
+
+  $("#scoreB")
+    .textContent =
+      room.stats?.B?.wins || 0;
 
 
   renderChallenge();
@@ -434,17 +1095,26 @@ function renderRoom() {
 
   if (
     room.activeGame &&
-    typeof room.activeGame === "object" &&
-    room.activeGame.status === "playing"
+    typeof room.activeGame ===
+      "object" &&
+    room.activeGame.status ===
+      "playing"
   ) {
     show("gameScreen");
+
     renderGame();
-  } else if (
+  }
+
+  else if (
     !$("#gameScreen")
       .classList
       .contains("hidden")
   ) {
-    $("#gameMount").innerHTML = "";
+    $("#gameMount")
+      .innerHTML = "";
+
+    hideTurnBanner();
+
     show("lobby");
   }
 
@@ -452,49 +1122,69 @@ function renderRoom() {
   const reaction =
     room.reaction;
 
+
   if (
     reaction &&
-    typeof reaction === "object" &&
-    reaction.at > lastReaction &&
-    reaction.from !== mySlot
+    typeof reaction ===
+      "object" &&
+    reaction.at >
+      lastReaction &&
+    reaction.from !==
+      mySlot
   ) {
     lastReaction =
       reaction.at;
 
     toast(
-      `${playerName(reaction.from)}: ${reaction.emoji}`
+      `${playerName(
+        reaction.from
+      )}: ${reaction.emoji}`
     );
   }
 }
 
 
+/* --------------------------------------------------
+   CHALLENGE
+-------------------------------------------------- */
+
 function renderChallenge() {
-  const challenge =
+  const challengeData =
     room.challenge;
 
   const banner =
     $("#challengeBanner");
 
+
   if (
-    challenge &&
-    typeof challenge === "object" &&
-    challenge.to === mySlot
+    challengeData &&
+    typeof challengeData ===
+      "object" &&
+    challengeData.to ===
+      mySlot
   ) {
     const game =
-      gameById(challenge.game);
+      gameById(
+        challengeData.game
+      );
+
 
     banner.classList.remove(
       "hidden"
     );
 
+
     banner.innerHTML = `
       <b>
-        ${playerName(challenge.from)}
+        ${playerName(
+          challengeData.from
+        )}
         wants to play
         ${game?.name || "a game"}
       </b>
 
       <div class="actions">
+
         <button id="acceptCh">
           Accept
         </button>
@@ -502,14 +1192,17 @@ function renderChallenge() {
         <button id="declineCh">
           Decline
         </button>
+
       </div>
     `;
+
 
     $("#acceptCh").onclick =
       () =>
         acceptChallenge(
-          challenge
+          challengeData
         );
+
 
     $("#declineCh").onclick =
       () =>
@@ -519,8 +1212,9 @@ function renderChallenge() {
             challenge: ""
           }
         );
+  }
 
-  } else {
+  else {
     banner.classList.add(
       "hidden"
     );
@@ -530,36 +1224,71 @@ function renderChallenge() {
 }
 
 
-/* --------------------------------------------------
-   CHALLENGES
--------------------------------------------------- */
-
 async function challenge(gameId) {
   if (
     !room.players?.A ||
     !room.players?.B ||
-    typeof room.players.A !== "object" ||
-    typeof room.players.B !== "object"
+    typeof room.players.A !==
+      "object" ||
+    typeof room.players.B !==
+      "object"
   ) {
     return toast(
       "Waiting for the other player."
     );
   }
 
+
   await update(
     roomRef(),
     {
       challenge: {
-        from: mySlot,
-        to: other(),
-        game: gameId,
-        at: Date.now()
+        from:
+          mySlot,
+
+        to:
+          other(),
+
+        game:
+          gameId,
+
+        at:
+          Date.now()
       }
     }
   );
 
+
   toast(
     "Challenge sent!"
+  );
+}
+
+
+function freshGameState(gameId) {
+  const starter =
+    Math.random() < 0.5
+      ? "A"
+      : "B";
+
+
+  if (gameId === "wyr") {
+    return initialState(
+      gameId,
+      starter,
+      {
+        deck:
+          shuffledIndexes(
+            questions.length
+          )
+      }
+    );
+  }
+
+
+  return initialState(
+    gameId,
+    starter
   );
 }
 
@@ -568,25 +1297,34 @@ async function acceptChallenge(
   challengeData
 ) {
   const state =
-    initialState(
-      challengeData.game,
-      Math.random() < 0.5
-        ? "A"
-        : "B"
+    freshGameState(
+      challengeData.game
     );
 
-  $("#gameMount").innerHTML = "";
+
+  $("#gameMount")
+    .innerHTML = "";
+
 
   await update(
     roomRef(),
     {
       challenge: "",
+
       activeGame: {
-        id: challengeData.game,
-        status: "playing",
+        id:
+          challengeData.game,
+
+        status:
+          "playing",
+
         state,
-        startedAt: Date.now(),
-        resultRecorded: false
+
+        startedAt:
+          Date.now(),
+
+        resultRecorded:
+          false
       }
     }
   );
@@ -594,26 +1332,246 @@ async function acceptChallenge(
 
 
 /* --------------------------------------------------
-   SHARE ROOM
+   SHARE
 -------------------------------------------------- */
 
 async function shareRoom() {
   const url =
     `${location.origin}${location.pathname}?room=${roomCode}`;
 
+
   if (navigator.share) {
     await navigator.share({
-      title: "Game Room",
+      title:
+        "Game Room",
+
       text:
         `Join my private Game Room — code ${roomCode}`,
+
       url
     }).catch(() => {});
-  } else {
+  }
+
+  else {
     prompt(
       "Copy this invite link:",
       url
     );
   }
+}
+
+
+/* --------------------------------------------------
+   TURN FEEDBACK
+-------------------------------------------------- */
+
+function setTurnBanner(
+  type,
+  icon,
+  title,
+  text
+) {
+  const banner =
+    $("#turnBanner");
+
+
+  banner.classList.remove(
+    "hidden",
+    "yours",
+    "waiting",
+    "finished"
+  );
+
+
+  if (type) {
+    banner.classList.add(
+      type
+    );
+  }
+
+
+  $("#turnBannerIcon")
+    .textContent =
+      icon;
+
+
+  $("#turnBannerTitle")
+    .textContent =
+      title;
+
+
+  $("#turnBannerText")
+    .textContent =
+      text;
+}
+
+
+function hideTurnBanner() {
+  $("#turnBanner")
+    .classList.add(
+      "hidden"
+    );
+
+
+  $("#playerCardA")
+    ?.classList
+    .remove(
+      "my-turn"
+    );
+
+
+  $("#playerCardB")
+    ?.classList
+    .remove(
+      "my-turn"
+    );
+}
+
+
+function renderTurnFeedback(
+  gameId,
+  state
+) {
+  $("#playerCardA")
+    ?.classList
+    .remove(
+      "my-turn"
+    );
+
+
+  $("#playerCardB")
+    ?.classList
+    .remove(
+      "my-turn"
+    );
+
+
+  if (state.winner) {
+    setTurnBanner(
+      "finished",
+      "🏆",
+      state.winner === "draw"
+        ? "DRAW"
+        : `${playerName(
+            state.winner
+          )} WINS`,
+      "Match finished"
+    );
+
+    return;
+  }
+
+
+  /*
+    Traditional turn-based games.
+  */
+  if (
+    gameId === "tictactoe" ||
+    gameId === "connect4" ||
+    gameId === "dots"
+  ) {
+    const turn =
+      state.turn;
+
+
+    if (turn) {
+      $(
+        `#playerCard${turn}`
+      )
+        ?.classList
+        .add(
+          "my-turn"
+        );
+    }
+
+
+    if (turn === mySlot) {
+      setTurnBanner(
+        "yours",
+        "🎯",
+        "YOUR TURN",
+        "Make your move"
+      );
+    }
+
+    else {
+      setTurnBanner(
+        "waiting",
+        "⏳",
+        `${playerName(
+          turn
+        )}'S TURN`,
+        "Waiting for their move…"
+      );
+    }
+
+    return;
+  }
+
+
+  /*
+    Secret simultaneous games.
+  */
+  if (
+    gameId === "rps" ||
+    gameId === "wyr"
+  ) {
+    const mine =
+      state.picks?.[mySlot] ||
+      "";
+
+    const theirs =
+      state.picks?.[other()] ||
+      "";
+
+    const both =
+      Boolean(
+        state.picks?.A &&
+        state.picks?.B
+      );
+
+
+    if (both) {
+      setTurnBanner(
+        "finished",
+        gameId === "rps"
+          ? "⚡"
+          : "🎉",
+        "REVEALED",
+        gameId === "rps"
+          ? "See how the round went"
+          : "Compare your answers"
+      );
+
+      return;
+    }
+
+
+    if (!mine) {
+      setTurnBanner(
+        "yours",
+        "👆",
+        "CHOOSE NOW",
+        theirs
+          ? "Your opponent has already chosen"
+          : "Make your private choice"
+      );
+    }
+
+    else {
+      setTurnBanner(
+        "waiting",
+        "🔒",
+        "CHOICE LOCKED",
+        "Waiting for the other player…"
+      );
+    }
+
+    return;
+  }
+
+
+  hideTurnBanner();
 }
 
 
@@ -625,103 +1583,130 @@ function renderGame() {
   const active =
     room.activeGame;
 
+
   if (
     !active ||
-    typeof active !== "object"
+    typeof active !==
+      "object"
   ) {
     return;
   }
 
+
   const game =
-    gameById(active.id);
+    gameById(
+      active.id
+    );
+
 
   const state =
     active.state || {};
 
+
   if (!game) {
-    $("#gameMount").innerHTML =
-      "<p>Game unavailable.</p>";
+    $("#gameMount")
+      .innerHTML =
+        "<p>Game unavailable.</p>";
+
+    hideTurnBanner();
 
     return;
   }
 
-  $("#gameTitle").textContent =
-    game.name;
+
+  $("#gameTitle")
+    .textContent =
+      game.name;
 
 
   if (state.winner) {
-    $("#turnLabel").textContent =
-      winnerText(state);
+    $("#turnLabel")
+      .textContent =
+        winnerText(state);
   }
 
   else if (
     active.id === "rps"
   ) {
-    $("#turnLabel").textContent =
-      `First to 3 rounds`;
+    $("#turnLabel")
+      .textContent =
+        "First to 3 rounds";
   }
 
   else if (
     active.id === "wyr"
   ) {
-    $("#turnLabel").textContent =
-      `Compare your choices`;
+    $("#turnLabel")
+      .textContent =
+        "Compare your choices";
   }
 
   else if (state.turn) {
-    $("#turnLabel").textContent =
-      `${playerName(state.turn)}'s turn`;
+    $("#turnLabel")
+      .textContent =
+        `${playerName(
+          state.turn
+        )}'s turn`;
   }
 
   else {
-    $("#turnLabel").textContent =
-      "";
+    $("#turnLabel")
+      .textContent = "";
   }
 
 
-  /*
-    Always clear the previous game's
-    HTML before rendering a different
-    game.
-
-    This prevents the old board from
-    remaining visible if a renderer
-    fails.
-  */
-  $("#gameMount").innerHTML = "";
+  renderTurnFeedback(
+    active.id,
+    state
+  );
 
 
-  if (active.id === "tictactoe") {
+  $("#gameMount")
+    .innerHTML = "";
+
+
+  if (
+    active.id ===
+      "tictactoe"
+  ) {
     renderTTT(state);
   }
 
-  else if (active.id === "connect4") {
+  else if (
+    active.id ===
+      "connect4"
+  ) {
     renderConnect(state);
   }
 
-  else if (active.id === "dots") {
+  else if (
+    active.id ===
+      "dots"
+  ) {
     renderDots(state);
   }
 
-  else if (active.id === "rps") {
+  else if (
+    active.id ===
+      "rps"
+  ) {
     renderRPS(state);
   }
 
-  else if (active.id === "wyr") {
+  else if (
+    active.id ===
+      "wyr"
+  ) {
     renderWYR(state);
   }
 
   else {
-    $("#gameMount").innerHTML =
-      "<p>Game unavailable.</p>";
+    $("#gameMount")
+      .innerHTML =
+        "<p>Game unavailable.</p>";
   }
 
 
-  /*
-    Would You Rather has no winner,
-    so it is deliberately excluded
-    from competitive statistics.
-  */
   if (
     state.winner &&
     active.id !== "wyr" &&
@@ -742,7 +1727,9 @@ function winnerText(state) {
     return "Draw!";
   }
 
-  return `${playerName(state.winner)} wins!`;
+  return `${playerName(
+    state.winner
+  )} wins!`;
 }
 
 
@@ -772,7 +1759,10 @@ function win3(cells) {
     [2,4,6]
   ];
 
-  for (const line of lines) {
+
+  for (
+    const line of lines
+  ) {
     if (
       cells[line[0]] &&
       cells[line[0]] ===
@@ -780,39 +1770,59 @@ function win3(cells) {
       cells[line[1]] ===
         cells[line[2]]
     ) {
-      return cells[line[0]];
+      return cells[
+        line[0]
+      ];
     }
   }
 
-  if (cells.every(Boolean)) {
+
+  if (
+    cells.every(Boolean)
+  ) {
     return "draw";
   }
+
 
   return "";
 }
 
 
 function renderTTT(state) {
-  $("#gameMount").innerHTML = `
-    <div class="board ttt">
-      ${state.cells.map(
-        (value, index) => `
-          <button data-i="${index}">
-            ${
-              value === "A"
-                ? "✕"
-                : value === "B"
-                ? "○"
-                : ""
-            }
-          </button>
-        `
-      ).join("")}
-    </div>
-  `;
+  $("#gameMount")
+    .innerHTML = `
+      <div class="board ttt">
+
+        ${state.cells.map(
+          (value,index) => `
+            <button
+              data-i="${index}"
+              class="${
+                state.lastMove ===
+                  index
+                  ? "last-move"
+                  : ""
+              }"
+            >
+              ${
+                value === "A"
+                  ? "✕"
+                  : value === "B"
+                  ? "○"
+                  : ""
+              }
+            </button>
+          `
+        ).join("")}
+
+      </div>
+    `;
+
 
   $("#gameMount")
-    .querySelectorAll("button")
+    .querySelectorAll(
+      "button"
+    )
     .forEach(button => {
 
       button.onclick =
@@ -821,29 +1831,46 @@ function renderTTT(state) {
           const index =
             +button.dataset.i;
 
+
           if (
             state.winner ||
-            state.turn !== mySlot ||
+            state.turn !==
+              mySlot ||
             state.cells[index]
           ) {
             return;
           }
 
+
           const next =
-            structuredClone(state);
+            structuredClone(
+              state
+            );
+
 
           next.cells[index] =
             mySlot;
 
+
+          next.lastMove =
+            index;
+
+
           next.winner =
-            win3(next.cells);
+            win3(
+              next.cells
+            );
+
 
           if (!next.winner) {
             next.turn =
               other();
           }
 
-          await pushState(next);
+
+          await pushState(
+            next
+          );
         };
     });
 }
@@ -866,7 +1893,7 @@ function connectWinner(cells) {
     ) {
 
       for (
-        const [dr, dc]
+        const [dr,dc]
         of [
           [0,1],
           [1,0],
@@ -874,13 +1901,21 @@ function connectWinner(cells) {
           [1,-1]
         ]
       ) {
-
         const player =
-          cells[row * 7 + col];
+          cells[
+            row * 7 +
+            col
+          ];
 
-        if (!player) continue;
 
-        let good = true;
+        if (!player) {
+          continue;
+        }
+
+
+        let good =
+          true;
+
 
         for (
           let k = 1;
@@ -893,17 +1928,21 @@ function connectWinner(cells) {
           const c =
             col + dc * k;
 
+
           if (
             r < 0 ||
             r >= 6 ||
             c < 0 ||
             c >= 7 ||
-            cells[r * 7 + c] !==
-              player
+            cells[
+              r * 7 + c
+            ] !== player
           ) {
-            good = false;
+            good =
+              false;
           }
         }
+
 
         if (good) {
           return player;
@@ -912,40 +1951,59 @@ function connectWinner(cells) {
     }
   }
 
-  if (cells.every(Boolean)) {
+
+  if (
+    cells.every(Boolean)
+  ) {
     return "draw";
   }
+
 
   return "";
 }
 
 
 function renderConnect(state) {
-  $("#gameMount").innerHTML = `
-    <div class="board connect">
-      ${state.cells.map(
-        (value, index) => `
-          <button
-            class="${
-              value === "A"
-                ? "red"
-                : value === "B"
-                ? "yellow"
-                : ""
-            }"
-            data-col="${index % 7}"
-            aria-label="Column ${
-              index % 7 + 1
-            }"
-          ></button>
-        `
-      ).join("")}
-    </div>
-  `;
+  $("#gameMount")
+    .innerHTML = `
+      <div class="board connect">
+
+        ${state.cells.map(
+          (value,index) => `
+            <button
+              class="
+                ${
+                  value === "A"
+                    ? "red"
+                    : value === "B"
+                    ? "yellow"
+                    : ""
+                }
+                ${
+                  state.lastMove ===
+                    index
+                    ? "last-move"
+                    : ""
+                }
+              "
+              data-col="${
+                index % 7
+              }"
+              aria-label="Column ${
+                index % 7 + 1
+              }"
+            ></button>
+          `
+        ).join("")}
+
+      </div>
+    `;
 
 
   $("#gameMount")
-    .querySelectorAll("button")
+    .querySelectorAll(
+      "button"
+    )
     .forEach(button => {
 
       button.onclick =
@@ -953,15 +2011,19 @@ function renderConnect(state) {
 
           if (
             state.winner ||
-            state.turn !== mySlot
+            state.turn !==
+              mySlot
           ) {
             return;
           }
 
+
           const col =
             +button.dataset.col;
 
+
           let row = -1;
+
 
           for (
             let r = 5;
@@ -978,26 +2040,46 @@ function renderConnect(state) {
             }
           }
 
-          if (row < 0) return;
+
+          if (row < 0) {
+            return;
+          }
+
 
           const next =
-            structuredClone(state);
+            structuredClone(
+              state
+            );
 
-          next.cells[
-            row * 7 + col
-          ] = mySlot;
+
+          const index =
+            row * 7 +
+            col;
+
+
+          next.cells[index] =
+            mySlot;
+
+
+          next.lastMove =
+            index;
+
 
           next.winner =
             connectWinner(
               next.cells
             );
 
+
           if (!next.winner) {
             next.turn =
               other();
           }
 
-          await pushState(next);
+
+          await pushState(
+            next
+          );
         };
     });
 }
@@ -1011,6 +2093,7 @@ function renderDots(state) {
   let html = "";
 
   const columns = [];
+
 
   for (
     let i = 0;
@@ -1044,6 +2127,7 @@ function renderDots(state) {
           `<span class="dotcell"></span>`;
       }
 
+
       else if (
         row % 2 === 0 &&
         col % 2 === 1
@@ -1052,18 +2136,32 @@ function renderDots(state) {
           (row / 2) * 5 +
           (col - 1) / 2;
 
+        const key =
+          `h-${index}`;
+
+
         html += `
           <button
-            class="edge h ${
-              state.h[index]
-                ? "on"
-                : ""
-            }"
+            class="
+              edge h
+              ${
+                state.h[index]
+                  ? "on"
+                  : ""
+              }
+              ${
+                state.lastEdge ===
+                  key
+                  ? "last-edge"
+                  : ""
+              }
+            "
             data-t="h"
             data-i="${index}"
           ></button>
         `;
       }
+
 
       else if (
         row % 2 === 1 &&
@@ -1073,32 +2171,49 @@ function renderDots(state) {
           ((row - 1) / 2) * 6 +
           col / 2;
 
+        const key =
+          `v-${index}`;
+
+
         html += `
           <button
-            class="edge v ${
-              state.v[index]
-                ? "on"
-                : ""
-            }"
+            class="
+              edge v
+              ${
+                state.v[index]
+                  ? "on"
+                  : ""
+              }
+              ${
+                state.lastEdge ===
+                  key
+                  ? "last-edge"
+                  : ""
+              }
+            "
             data-t="v"
             data-i="${index}"
           ></button>
         `;
       }
 
+
       else {
         const index =
           ((row - 1) / 2) * 5 +
           (col - 1) / 2;
 
+
         html += `
           <span
             class="box ${
-              state.boxes[index] || ""
+              state.boxes[index] ||
+              ""
             }"
           >
             ${
-              state.boxes[index] || ""
+              state.boxes[index] ||
+              ""
             }
           </span>
         `;
@@ -1107,33 +2222,36 @@ function renderDots(state) {
   }
 
 
-  $("#gameMount").innerHTML = `
-    <div style="text-align:center">
-      <b>
-        ${playerName("A")}
-        ${state.scores.A}
-        ·
-        ${state.scores.B}
-        ${playerName("B")}
-      </b>
-    </div>
+  $("#gameMount")
+    .innerHTML = `
+      <div style="text-align:center">
+        <b>
+          ${playerName("A")}
+          ${state.scores.A}
+          ·
+          ${state.scores.B}
+          ${playerName("B")}
+        </b>
+      </div>
 
-    <div
-      class="board dots"
-      style="
-        grid-template-columns:
-        ${columns.join(" ")};
-        grid-template-rows:
-        repeat(11,auto);
-      "
-    >
-      ${html}
-    </div>
-  `;
+      <div
+        class="board dots"
+        style="
+          grid-template-columns:
+          ${columns.join(" ")};
+          grid-template-rows:
+          repeat(11,auto);
+        "
+      >
+        ${html}
+      </div>
+    `;
 
 
   $("#gameMount")
-    .querySelectorAll(".edge")
+    .querySelectorAll(
+      ".edge"
+    )
     .forEach(button => {
 
       button.onclick =
@@ -1162,10 +2280,18 @@ async function dotsMove(
 
 
   const next =
-    structuredClone(state);
+    structuredClone(
+      state
+    );
+
 
   next[type][index] =
     mySlot;
+
+
+  next.lastEdge =
+    `${type}-${index}`;
+
 
   let claimed = 0;
 
@@ -1180,13 +2306,15 @@ async function dotsMove(
       boxCol < 5;
       boxCol++
     ) {
-
       const boxIndex =
         boxRow * 5 +
         boxCol;
 
+
       if (
-        next.boxes[boxIndex]
+        next.boxes[
+          boxIndex
+        ]
       ) {
         continue;
       }
@@ -1215,10 +2343,13 @@ async function dotsMove(
         next.v[left] &&
         next.v[right]
       ) {
-        next.boxes[boxIndex] =
-          mySlot;
+        next.boxes[
+          boxIndex
+        ] = mySlot;
 
-        next.scores[mySlot]++;
+        next.scores[
+          mySlot
+        ]++;
 
         claimed++;
       }
@@ -1226,10 +2357,6 @@ async function dotsMove(
   }
 
 
-  /*
-    Completing a box gives the
-    same player another turn.
-  */
   if (!claimed) {
     next.turn =
       other();
@@ -1237,7 +2364,9 @@ async function dotsMove(
 
 
   if (
-    next.boxes.every(Boolean)
+    next.boxes.every(
+      Boolean
+    )
   ) {
     if (
       next.scores.A ===
@@ -1245,7 +2374,9 @@ async function dotsMove(
     ) {
       next.winner =
         "draw";
-    } else {
+    }
+
+    else {
       next.winner =
         next.scores.A >
         next.scores.B
@@ -1255,7 +2386,9 @@ async function dotsMove(
   }
 
 
-  await pushState(next);
+  await pushState(
+    next
+  );
 }
 
 
@@ -1272,7 +2405,9 @@ function rpsEmoji(choice) {
     return "✋";
   }
 
-  if (choice === "scissors") {
+  if (
+    choice === "scissors"
+  ) {
     return "✌️";
   }
 
@@ -1288,39 +2423,63 @@ function rpsRoundWinner(
     return "";
   }
 
+
   if (
-    (a === "rock" &&
-      b === "scissors") ||
-
-    (a === "paper" &&
-      b === "rock") ||
-
-    (a === "scissors" &&
-      b === "paper")
+    (
+      a === "rock" &&
+      b === "scissors"
+    ) ||
+    (
+      a === "paper" &&
+      b === "rock"
+    ) ||
+    (
+      a === "scissors" &&
+      b === "paper"
+    )
   ) {
     return "A";
   }
+
 
   return "B";
 }
 
 
 function renderRPS(state) {
+  state.picks ??= {
+    A: "",
+    B: ""
+  };
+
+  state.roundWins ??= {
+    A: 0,
+    B: 0
+  };
+
+
   const myPick =
-    state.picks?.[mySlot] || "";
+    state.picks[
+      mySlot
+    ] || "";
+
 
   const opponentPick =
-    state.picks?.[other()] || "";
+    state.picks[
+      other()
+    ] || "";
+
 
   const bothPicked =
     Boolean(
-      state.picks?.A &&
-      state.picks?.B
+      state.picks.A &&
+      state.picks.B
     );
 
 
   let statusText =
     "Choose secretly. Your opponent cannot see your choice.";
+
 
   if (
     myPick &&
@@ -1338,7 +2497,9 @@ function renderRPS(state) {
       "Your opponent has chosen. Make your pick.";
   }
 
-  else if (bothPicked) {
+  else if (
+    bothPicked
+  ) {
     statusText =
       state.last ||
       "Choices revealed!";
@@ -1347,11 +2508,13 @@ function renderRPS(state) {
 
   let revealHTML = "";
 
+
   if (bothPicked) {
     revealHTML = `
       <div class="rps-reveal">
 
         <div class="rps-choice">
+
           <small>
             ${playerName("A")}
           </small>
@@ -1361,11 +2524,15 @@ function renderRPS(state) {
               state.picks.A
             )}
           </div>
+
         </div>
+
 
         <b>VS</b>
 
+
         <div class="rps-choice">
+
           <small>
             ${playerName("B")}
           </small>
@@ -1375,6 +2542,7 @@ function renderRPS(state) {
               state.picks.B
             )}
           </div>
+
         </div>
 
       </div>
@@ -1382,108 +2550,119 @@ function renderRPS(state) {
   }
 
 
-  $("#gameMount").innerHTML = `
-    <div class="rpsresult">
+  $("#gameMount")
+    .innerHTML = `
+      <div class="rpsresult">
+
+        ${
+          state.winner
+            ? `${playerName(
+                state.winner
+              )} wins the match! 🎉`
+            : `Round ${state.round}`
+        }
+
+        <small>
+          ${playerName("A")}
+          ${state.roundWins.A}
+          –
+          ${state.roundWins.B}
+          ${playerName("B")}
+        </small>
+
+        <small>
+          ${statusText}
+        </small>
+
+      </div>
+
+
+      ${revealHTML}
+
 
       ${
-        state.winner
-          ? `${playerName(
-              state.winner
-            )} wins the match! 🎉`
-          : `Round ${state.round}`
+        !bothPicked &&
+        !state.winner
+          ? `
+            <div class="board rps">
+
+              <button
+                data-p="rock"
+                class="${
+                  myPick ===
+                    "rock"
+                    ? "selected"
+                    : ""
+                }"
+                ${
+                  myPick
+                    ? "disabled"
+                    : ""
+                }
+              >
+                ✊
+              </button>
+
+
+              <button
+                data-p="paper"
+                class="${
+                  myPick ===
+                    "paper"
+                    ? "selected"
+                    : ""
+                }"
+                ${
+                  myPick
+                    ? "disabled"
+                    : ""
+                }
+              >
+                ✋
+              </button>
+
+
+              <button
+                data-p="scissors"
+                class="${
+                  myPick ===
+                    "scissors"
+                    ? "selected"
+                    : ""
+                }"
+                ${
+                  myPick
+                    ? "disabled"
+                    : ""
+                }
+              >
+                ✌️
+              </button>
+
+            </div>
+          `
+          : ""
       }
 
-      <small>
-        ${playerName("A")}
-        ${state.roundWins.A}
-        –
-        ${state.roundWins.B}
-        ${playerName("B")}
-      </small>
 
-      <small>
-        ${statusText}
-      </small>
+      ${
+        bothPicked &&
+        !state.winner
+          ? `
+            <div style="text-align:center">
 
-    </div>
+              <button
+                id="nextRpsRound"
+                class="primary"
+              >
+                Next round
+              </button>
 
-    ${revealHTML}
-
-    ${
-      !bothPicked &&
-      !state.winner
-        ? `
-          <div class="board rps">
-
-            <button
-              data-p="rock"
-              class="${
-                myPick === "rock"
-                  ? "selected"
-                  : ""
-              }"
-              ${
-                myPick
-                  ? "disabled"
-                  : ""
-              }
-            >
-              ✊
-            </button>
-
-            <button
-              data-p="paper"
-              class="${
-                myPick === "paper"
-                  ? "selected"
-                  : ""
-              }"
-              ${
-                myPick
-                  ? "disabled"
-                  : ""
-              }
-            >
-              ✋
-            </button>
-
-            <button
-              data-p="scissors"
-              class="${
-                myPick === "scissors"
-                  ? "selected"
-                  : ""
-              }"
-              ${
-                myPick
-                  ? "disabled"
-                  : ""
-              }
-            >
-              ✌️
-            </button>
-
-          </div>
-        `
-        : ""
-    }
-
-    ${
-      bothPicked &&
-      !state.winner
-        ? `
-          <div style="text-align:center">
-            <button
-              id="nextRpsRound"
-              class="primary"
-            >
-              Next round
-            </button>
-          </div>
-        `
-        : ""
-    }
-  `;
+            </div>
+          `
+          : ""
+      }
+    `;
 
 
   $("#gameMount")
@@ -1505,7 +2684,9 @@ function renderRPS(state) {
     ?.addEventListener(
       "click",
       () =>
-        nextRpsRound(state)
+        nextRpsRound(
+          state
+        )
     );
 }
 
@@ -1516,22 +2697,35 @@ async function rpsPick(
 ) {
   if (
     state.winner ||
-    state.picks?.[mySlot]
+    state.picks?.[
+      mySlot
+    ]
   ) {
     return;
   }
 
 
   const next =
-    structuredClone(state);
+    structuredClone(
+      state
+    );
+
 
   next.picks ??= {
     A: "",
     B: ""
   };
 
-  next.picks[mySlot] =
-    pick;
+
+  next.roundWins ??= {
+    A: 0,
+    B: 0
+  };
+
+
+  next.picks[
+    mySlot
+  ] = pick;
 
 
   if (
@@ -1546,10 +2740,15 @@ async function rpsPick(
 
 
     if (winner) {
-      next.roundWins[winner]++;
+      next.roundWins[
+        winner
+      ]++;
+
 
       next.last =
-        `${playerName(winner)} won this round`;
+        `${playerName(
+          winner
+        )} won this round`;
     }
 
     else {
@@ -1568,11 +2767,15 @@ async function rpsPick(
           : "B";
     }
 
-    next.reveal = true;
+
+    next.reveal =
+      true;
   }
 
 
-  await pushState(next);
+  await pushState(
+    next
+  );
 }
 
 
@@ -1589,19 +2792,27 @@ async function nextRpsRound(
 
 
   const next =
-    structuredClone(state);
+    structuredClone(
+      state
+    );
+
 
   next.round++;
+
 
   next.picks = {
     A: "",
     B: ""
   };
 
+
   next.last = "";
   next.reveal = false;
 
-  await pushState(next);
+
+  await pushState(
+    next
+  );
 }
 
 
@@ -1609,28 +2820,86 @@ async function nextRpsRound(
    WOULD YOU RATHER
 -------------------------------------------------- */
 
-function renderWYR(state) {
-  const question =
-    questions[
-      state.index %
-      questions.length
+function currentWYRQuestion(
+  state
+) {
+  /*
+    Compatibility fallback for any WYR
+    match created before Phase 3.
+  */
+  if (
+    !Array.isArray(
+      state.deck
+    ) ||
+    !state.deck.length
+  ) {
+    state.deck =
+      shuffledIndexes(
+        questions.length
+      );
+
+    state.position =
+      state.position ??
+      state.index ??
+      0;
+  }
+
+
+  const position =
+    state.position || 0;
+
+
+  const questionIndex =
+    state.deck[
+      position %
+      state.deck.length
     ];
 
+
+  return (
+    questions[
+      questionIndex
+    ] ||
+    questions[0]
+  );
+}
+
+
+function renderWYR(state) {
+  state.picks ??= {
+    A: "",
+    B: ""
+  };
+
+
+  const question =
+    currentWYRQuestion(
+      state
+    );
+
+
   const myPick =
-    state.picks?.[mySlot] || "";
+    state.picks[
+      mySlot
+    ] || "";
+
 
   const opponentPick =
-    state.picks?.[other()] || "";
+    state.picks[
+      other()
+    ] || "";
+
 
   const bothPicked =
     Boolean(
-      state.picks?.A &&
-      state.picks?.B
+      state.picks.A &&
+      state.picks.B
     );
 
 
   let status =
     "Choose privately. Your answer stays hidden until both players choose.";
+
 
   if (
     myPick &&
@@ -1651,16 +2920,19 @@ function renderWYR(state) {
 
   let reveal = "";
 
+
   if (bothPicked) {
     const answerA =
       state.picks.A === "1"
         ? question[0]
         : question[1];
 
+
     const answerB =
       state.picks.B === "1"
         ? question[0]
         : question[1];
+
 
     const matched =
       state.picks.A ===
@@ -1671,6 +2943,7 @@ function renderWYR(state) {
       <div class="wyr-reveal">
 
         <div class="rpsresult">
+
           ${
             matched
               ? "Same choice! 🎉"
@@ -1678,11 +2951,12 @@ function renderWYR(state) {
           }
 
           <small>
-            ${state.matches}
+            ${state.matches || 0}
             matches in
-            ${state.rounds}
+            ${state.rounds || 0}
             answered questions
           </small>
+
         </div>
 
 
@@ -1724,58 +2998,61 @@ function renderWYR(state) {
   }
 
 
-  $("#gameMount").innerHTML = `
-    <div class="wyrprompt">
-      Would you rather…
-    </div>
-
-    <div class="wyr-status">
-      ${status}
-    </div>
-
-    <div class="board wyr">
-
-      ${
-        !bothPicked
-          ? `
-            <button
-              data-wyr="1"
-              class="${
-                myPick === "1"
-                  ? "selected"
-                  : ""
-              }"
-              ${
-                myPick
-                  ? "disabled"
-                  : ""
-              }
-            >
-              ${question[0]}
-            </button>
+  $("#gameMount")
+    .innerHTML = `
+      <div class="wyrprompt">
+        Would you rather…
+      </div>
 
 
-            <button
-              data-wyr="2"
-              class="${
-                myPick === "2"
-                  ? "selected"
-                  : ""
-              }"
-              ${
-                myPick
-                  ? "disabled"
-                  : ""
-              }
-            >
-              ${question[1]}
-            </button>
-          `
-          : reveal
-      }
+      <div class="wyr-status">
+        ${status}
+      </div>
 
-    </div>
-  `;
+
+      <div class="board wyr">
+
+        ${
+          !bothPicked
+            ? `
+              <button
+                data-wyr="1"
+                class="${
+                  myPick === "1"
+                    ? "selected"
+                    : ""
+                }"
+                ${
+                  myPick
+                    ? "disabled"
+                    : ""
+                }
+              >
+                ${question[0]}
+              </button>
+
+
+              <button
+                data-wyr="2"
+                class="${
+                  myPick === "2"
+                    ? "selected"
+                    : ""
+                }"
+                ${
+                  myPick
+                    ? "disabled"
+                    : ""
+                }
+              >
+                ${question[1]}
+              </button>
+            `
+            : reveal
+        }
+
+      </div>
+    `;
 
 
   $("#gameMount")
@@ -1797,7 +3074,9 @@ function renderWYR(state) {
     ?.addEventListener(
       "click",
       () =>
-        nextWYRQuestion(state)
+        nextWYRQuestion(
+          state
+        )
     );
 }
 
@@ -1807,42 +3086,56 @@ async function wyrPick(
   pick
 ) {
   if (
-    state.picks?.[mySlot]
+    state.picks?.[
+      mySlot
+    ]
   ) {
     return;
   }
 
 
   const next =
-    structuredClone(state);
+    structuredClone(
+      state
+    );
+
 
   next.picks ??= {
     A: "",
     B: ""
   };
 
-  next.picks[mySlot] =
-    pick;
+
+  next.picks[
+    mySlot
+  ] = pick;
 
 
   if (
     next.picks.A &&
     next.picks.B
   ) {
-    next.rounds++;
+    next.rounds =
+      (next.rounds || 0) + 1;
+
 
     if (
       next.picks.A ===
       next.picks.B
     ) {
-      next.matches++;
+      next.matches =
+        (next.matches || 0) + 1;
     }
 
-    next.reveal = true;
+
+    next.reveal =
+      true;
   }
 
 
-  await pushState(next);
+  await pushState(
+    next
+  );
 }
 
 
@@ -1858,18 +3151,56 @@ async function nextWYRQuestion(
 
 
   const next =
-    structuredClone(state);
+    structuredClone(
+      state
+    );
 
-  next.index++;
+
+  /*
+    If this deck has somehow been
+    exhausted, create a brand-new
+    shuffled sequence.
+
+    No question repeats before every
+    question in the current deck has
+    been used.
+  */
+  const nextPosition =
+    (next.position || 0) + 1;
+
+
+  if (
+    nextPosition >=
+    next.deck.length
+  ) {
+    next.deck =
+      shuffledIndexes(
+        questions.length
+      );
+
+    next.position =
+      0;
+  }
+
+  else {
+    next.position =
+      nextPosition;
+  }
+
 
   next.picks = {
     A: "",
     B: ""
   };
 
-  next.reveal = false;
 
-  await pushState(next);
+  next.reveal =
+    false;
+
+
+  await pushState(
+    next
+  );
 }
 
 
@@ -1895,11 +3226,15 @@ async function recordResult(
         A: {
           wins: 0
         },
+
         B: {
           wins: 0
         },
+
         draws: 0,
+
         total: 0,
+
         byGame: {}
       }
     );
@@ -1909,17 +3244,22 @@ async function recordResult(
     wins: 0
   };
 
+
   stats.B ??= {
     wins: 0
   };
 
+
   stats.byGame ??= {};
+
 
   stats.total =
     (stats.total || 0) + 1;
 
 
-  stats.byGame[game] ??= {
+  stats.byGame[
+    game
+  ] ??= {
     A: 0,
     B: 0,
     draws: 0,
@@ -1927,8 +3267,14 @@ async function recordResult(
   };
 
 
-  stats.byGame[game].total =
-    (stats.byGame[game].total || 0) + 1;
+  stats.byGame[
+    game
+  ].total =
+    (
+      stats.byGame[
+        game
+      ].total || 0
+    ) + 1;
 
 
   if (
@@ -1937,16 +3283,36 @@ async function recordResult(
     stats.draws =
       (stats.draws || 0) + 1;
 
-    stats.byGame[game].draws =
-      (stats.byGame[game].draws || 0) + 1;
+
+    stats.byGame[
+      game
+    ].draws =
+      (
+        stats.byGame[
+          game
+        ].draws || 0
+      ) + 1;
   }
 
   else {
-    stats[winner].wins =
-      (stats[winner].wins || 0) + 1;
+    stats[
+      winner
+    ].wins =
+      (
+        stats[
+          winner
+        ].wins || 0
+      ) + 1;
 
-    stats.byGame[game][winner] =
-      (stats.byGame[game][winner] || 0) + 1;
+
+    stats.byGame[
+      game
+    ][winner] =
+      (
+        stats.byGame[
+          game
+        ][winner] || 0
+      ) + 1;
   }
 
 
@@ -1954,6 +3320,7 @@ async function recordResult(
     roomRef(),
     {
       stats,
+
       "activeGame/resultRecorded":
         true
     }
@@ -1965,50 +3332,65 @@ function showStats() {
   const stats =
     room?.stats || {};
 
+
   let html = `
     <div class="statrow">
       <b>Total matches</b>
+
       <span>
         ${stats.total || 0}
       </span>
     </div>
 
+
     <div class="statrow">
       <b>
         ${playerName("A")} wins
       </b>
+
       <span>
         ${stats.A?.wins || 0}
       </span>
     </div>
 
+
     <div class="statrow">
       <b>
         ${playerName("B")} wins
       </b>
+
       <span>
         ${stats.B?.wins || 0}
       </span>
     </div>
 
+
     <div class="statrow">
       <b>Draws</b>
+
       <span>
         ${stats.draws || 0}
       </span>
     </div>
 
+
     <h3>By game</h3>
   `;
 
 
-  for (const game of catalog) {
+  for (
+    const game of catalog
+  ) {
     const gameStats =
-      stats.byGame?.[game.id];
+      stats.byGame?.[
+        game.id
+      ];
+
 
     if (!gameStats) {
       continue;
     }
+
 
     html += `
       <div class="statrow">
@@ -2035,10 +3417,13 @@ function showStats() {
   }
 
 
-  $("#statsContent").innerHTML =
-    html;
+  $("#statsContent")
+    .innerHTML =
+      html;
 
-  $("#statsDialog").showModal();
+
+  $("#statsDialog")
+    .showModal();
 }
 
 
@@ -2059,29 +3444,40 @@ async function rematch() {
   const gameId =
     room.activeGame.id;
 
+
   const state =
-    initialState(
-      gameId,
-      Math.random() < 0.5
-        ? "A"
-        : "B"
+    freshGameState(
+      gameId
     );
 
 
   await update(
-    roomRef("activeGame"),
+    roomRef(
+      "activeGame"
+    ),
     {
       state,
-      status: "playing",
-      resultRecorded: false,
-      startedAt: Date.now()
+
+      status:
+        "playing",
+
+      resultRecorded:
+        false,
+
+      startedAt:
+        Date.now()
     }
   );
 }
 
 
 async function backToLobby() {
-  $("#gameMount").innerHTML = "";
+  $("#gameMount")
+    .innerHTML = "";
+
+
+  hideTurnBanner();
+
 
   await update(
     roomRef(),
@@ -2089,6 +3485,7 @@ async function backToLobby() {
       activeGame: ""
     }
   );
+
 
   show("lobby");
 }
@@ -2101,8 +3498,10 @@ async function backToLobby() {
 $("#createRoom").onclick =
   createRoom;
 
+
 $("#joinRoom").onclick =
   joinStart;
+
 
 $("#backLanding").onclick =
   () =>
@@ -2110,8 +3509,11 @@ $("#backLanding").onclick =
 
 
 document
-  .querySelectorAll(".slot")
+  .querySelectorAll(
+    ".slot"
+  )
   .forEach(button => {
+
     button.onclick =
       () =>
         claimSlot(
@@ -2122,12 +3524,17 @@ document
 
 $("#gameTiles").onclick =
   event => {
+
     const button =
       event.target.closest(
         "[data-game]"
       );
 
-    if (!button) return;
+
+    if (!button) {
+      return;
+    }
+
 
     openGameInfo(
       button.dataset.game
@@ -2141,11 +3548,14 @@ $("#closeGameInfo").onclick =
 
 $("#challengePlayerBtn").onclick =
   async () => {
+
     if (!selectedGame) {
       return;
     }
 
+
     closeGameInfo();
+
 
     await challenge(
       selectedGame
@@ -2153,13 +3563,49 @@ $("#challengePlayerBtn").onclick =
   };
 
 
+$("#savedRooms").onclick =
+  event => {
+
+    const removeButton =
+      event.target.closest(
+        "[data-remove-room]"
+      );
+
+
+    if (removeButton) {
+      removeSavedRoom(
+        removeButton.dataset
+          .removeRoom
+      );
+
+      return;
+    }
+
+
+    const openButton =
+      event.target.closest(
+        "[data-open-room]"
+      );
+
+
+    if (openButton) {
+      openSavedRoom(
+        openButton.dataset
+          .openRoom
+      );
+    }
+  };
+
+
 document.addEventListener(
   "click",
   event => {
+
     const reactionButton =
       event.target.closest(
         "[data-reaction]"
       );
+
 
     if (
       reactionButton &&
@@ -2178,8 +3624,10 @@ document.addEventListener(
 $("#shareBtn").onclick =
   shareRoom;
 
+
 $("#backLobby").onclick =
   backToLobby;
+
 
 $("#rematchBtn").onclick =
   rematch;
@@ -2187,9 +3635,12 @@ $("#rematchBtn").onclick =
 
 $("#statsBtn").onclick =
   () => {
+
     if (room) {
       showStats();
-    } else {
+    }
+
+    else {
       toast(
         "Join a room first"
       );
@@ -2199,26 +3650,40 @@ $("#statsBtn").onclick =
 
 $("#closeStats").onclick =
   () =>
-    $("#statsDialog").close();
+    $("#statsDialog")
+      .close();
+
+
+$("#themeBtn").onclick =
+  toggleTheme;
 
 
 $("#soundBtn").onclick =
   () => {
-    sound = !sound;
 
-    $("#soundBtn").textContent =
-      sound
-        ? "🔊"
-        : "🔇";
+    sound =
+      !sound;
+
+
+    $("#soundBtn")
+      .textContent =
+        sound
+          ? "🔊"
+          : "🔇";
   };
 
 
 $("#homeBtn").onclick =
   () => {
+
     if (room) {
       show("lobby");
-    } else {
+    }
+
+    else {
       show("landing");
+
+      renderSavedRooms();
     }
   };
 
