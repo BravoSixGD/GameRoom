@@ -2,10 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+
   <meta
     name="viewport"
     content="width=device-width,initial-scale=1,viewport-fit=cover"
   >
+
   <meta name="theme-color" content="#6750a4">
 
   <title>Game Room</title>
@@ -42,6 +44,15 @@
       </button>
 
       <button
+        id="themeBtn"
+        class="iconbtn"
+        title="Dark mode"
+        aria-label="Toggle dark mode"
+      >
+        🌙
+      </button>
+
+      <button
         id="soundBtn"
         class="iconbtn"
         title="Sound"
@@ -63,7 +74,7 @@
       <h1>Your private game room</h1>
 
       <p>
-        Make one room, share the link, and keep coming back.
+        Make a room, share the link, and keep coming back.
       </p>
 
     </div>
@@ -89,7 +100,7 @@
           id="createRoom"
           class="primary"
         >
-          Create permanent room
+          Create new room
         </button>
 
       </div>
@@ -111,9 +122,40 @@
 
       </div>
 
-      <p id="landingMsg" class="msg"></p>
+
+      <p
+        id="landingMsg"
+        class="msg"
+      ></p>
 
     </div>
+
+
+    <!-- SAVED ROOMS -->
+    <section
+      id="savedRoomsSection"
+      class="saved-rooms-section hidden"
+    >
+
+      <div class="section-title">
+
+        <div>
+          <h3>Your Rooms</h3>
+
+          <p>
+            Rooms remembered on this device.
+          </p>
+        </div>
+
+      </div>
+
+
+      <div
+        id="savedRooms"
+        class="saved-rooms"
+      ></div>
+
+    </section>
 
   </section>
 
@@ -141,7 +183,10 @@
           data-slot="A"
         >
           <b>Player A</b>
-          <span id="slotAName">Available</span>
+
+          <span id="slotAName">
+            Available
+          </span>
         </button>
 
 
@@ -150,7 +195,10 @@
           data-slot="B"
         >
           <b>Player B</b>
-          <span id="slotBName">Available</span>
+
+          <span id="slotBName">
+            Available
+          </span>
         </button>
 
       </div>
@@ -178,7 +226,10 @@
 
       <div>
         <small>PRIVATE ROOM</small>
-        <h2 id="roomLabel">------</h2>
+
+        <h2 id="roomLabel">
+          ------
+        </h2>
       </div>
 
 
@@ -194,13 +245,19 @@
 
     <div class="players">
 
-      <div class="playercard">
+      <div
+        id="playerCardA"
+        class="playercard"
+      >
 
         <span class="dot"></span>
 
         <div>
           <small>PLAYER A</small>
-          <b id="playerA">Waiting…</b>
+
+          <b id="playerA">
+            Waiting…
+          </b>
         </div>
 
         <span
@@ -213,13 +270,19 @@
       </div>
 
 
-      <div class="playercard">
+      <div
+        id="playerCardB"
+        class="playercard"
+      >
 
         <span class="dot"></span>
 
         <div>
           <small>PLAYER B</small>
-          <b id="playerB">Waiting…</b>
+
+          <b id="playerB">
+            Waiting…
+          </b>
         </div>
 
         <span
@@ -245,20 +308,21 @@
 
       <div>
         <h3>Pick a game</h3>
-        <p>Tap any game to see its rules.</p>
+
+        <p>
+          Tap any game to see its rules.
+        </p>
       </div>
 
     </div>
 
 
-    <!-- GAME TILES -->
     <div
       id="gameTiles"
       class="tiles"
     ></div>
 
 
-    <!-- REACTIONS -->
     <div
       class="reactions"
       id="lobbyReactions"
@@ -310,11 +374,37 @@
     </div>
 
 
+    <!-- STRONG VISUAL TURN FEEDBACK -->
+    <div
+      id="turnBanner"
+      class="turn-banner hidden"
+      aria-live="polite"
+    >
+
+      <span
+        id="turnBannerIcon"
+        class="turn-banner-icon"
+      >
+        🎯
+      </span>
+
+      <div>
+        <b id="turnBannerTitle">
+          Your turn
+        </b>
+
+        <small id="turnBannerText">
+          Make your move
+        </small>
+      </div>
+
+    </div>
+
+
     <!-- EACH GAME RENDERS HERE -->
     <div id="gameMount"></div>
 
 
-    <!-- IN-GAME REACTIONS -->
     <div
       class="reactions"
       id="gameReactions"
@@ -323,7 +413,7 @@
   </section>
 
 
-  <!-- GAME INFORMATION / RULES -->
+  <!-- GAME INFORMATION -->
   <dialog id="gameInfoDialog">
 
     <div class="dialoghead">
@@ -337,8 +427,10 @@
           🎮
         </span>
 
+
         <div>
           <small>HOW TO PLAY</small>
+
           <h2 id="gameInfoTitle">
             Game
           </h2>
@@ -408,7 +500,7 @@
   </dialog>
 
 
-  <!-- SMALL NOTIFICATION -->
+  <!-- TOAST -->
   <div
     id="toast"
     class="toast hidden"
