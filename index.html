@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#6750a4">
+<title>Game Room</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<main id="app">
+  <header class="topbar">
+    <button id="homeBtn" class="brand" aria-label="Home">🎮 <span>Game Room</span></button>
+    <div class="top-actions">
+      <button id="statsBtn" class="iconbtn" title="Stats">🏆</button>
+      <button id="soundBtn" class="iconbtn" title="Sound">🔊</button>
+    </div>
+  </header>
+
+  <section id="landing" class="screen">
+    <div class="hero">
+      <h1>Your private game room</h1>
+      <p>Make one room, share the link, and keep coming back.</p>
+    </div>
+    <div class="panel">
+      <label>Nickname for this session<input id="nickname" maxlength="18" placeholder="Your nickname"></label>
+      <div class="row">
+        <button id="createRoom" class="primary">Create permanent room</button>
+      </div>
+      <div class="joinrow">
+        <input id="roomCode" maxlength="6" placeholder="ROOM CODE" autocapitalize="characters">
+        <button id="joinRoom">Join room</button>
+      </div>
+      <p id="landingMsg" class="msg"></p>
+    </div>
+  </section>
+
+  <section id="slotScreen" class="screen hidden">
+    <div class="panel centered">
+      <h2>Choose your player slot</h2>
+      <p>This keeps long-term stats attached to Player A or Player B even when nicknames change.</p>
+      <div class="slotgrid">
+        <button class="slot" data-slot="A"><b>Player A</b><span id="slotAName">Available</span></button>
+        <button class="slot" data-slot="B"><b>Player B</b><span id="slotBName">Available</span></button>
+      </div>
+      <button id="backLanding" class="ghost">Back</button>
+    </div>
+  </section>
+
+  <section id="lobby" class="screen hidden">
+    <div class="roomhead">
+      <div><small>PRIVATE ROOM</small><h2 id="roomLabel">------</h2></div>
+      <button id="shareBtn" class="primary">Share invite</button>
+    </div>
+    <div class="players">
+      <div class="playercard"><span class="dot"></span><div><small>PLAYER A</small><b id="playerA">Waiting…</b></div><span id="scoreA" class="score">0</span></div>
+      <div class="playercard"><span class="dot"></span><div><small>PLAYER B</small><b id="playerB">Waiting…</b></div><span id="scoreB" class="score">0</span></div>
+    </div>
+    <div id="challengeBanner" class="challenge hidden"></div>
+    <h3>Pick a game</h3>
+    <div id="gameTiles" class="tiles"></div>
+    <div class="reactions" id="lobbyReactions"></div>
+    <p id="lobbyMsg" class="msg"></p>
+  </section>
+
+  <section id="gameScreen" class="screen hidden">
+    <div class="gamehead">
+      <button id="backLobby" class="ghost">← Games</button>
+      <div><h2 id="gameTitle">Game</h2><small id="turnLabel"></small></div>
+      <button id="rematchBtn" class="ghost">Rematch</button>
+    </div>
+    <div id="gameMount"></div>
+    <div class="reactions" id="gameReactions"></div>
+  </section>
+
+  <dialog id="statsDialog">
+    <div class="dialoghead"><h2>Room stats</h2><button id="closeStats">✕</button></div>
+    <div id="statsContent"></div>
+  </dialog>
+
+  <div id="toast" class="toast hidden" aria-live="polite"></div>
+</main>
+<script type="module" src="./app.js"></script>
+</body></html>
