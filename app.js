@@ -16,6 +16,11 @@ import {
   shuffledIndexes
 } from "./core/games.js";
 
+import {
+  renderPropertyGame,
+  propertyTurnText
+} from "./core/property-game.js";
+
 
 const $ = s => document.querySelector(s);
 
@@ -34,13 +39,6 @@ const STORAGE_THEME = "gameRoom.theme.v1";
 
 /* --------------------------------------------------
    WOULD YOU RATHER QUESTION BANK
-
-   These are kept in one place so adding more later
-   is easy.
-
-   The game stores only the shuffled question indexes
-   in Firebase, so both players always see the same
-   sequence.
 -------------------------------------------------- */
 
 const questions = [
@@ -476,13 +474,6 @@ function rememberRoom() {
 
   filtered.unshift(entry);
 
-  /*
-    There is no real need for dozens of
-    old rooms on a phone.
-
-    Keeping the latest 20 also prevents
-    localStorage from becoming cluttered.
-  */
   setSavedRooms(
     filtered.slice(0, 20)
   );
@@ -908,11 +899,6 @@ async function joinStart() {
 
 
   if (!snapshot.exists()) {
-    /*
-      If a remembered room was later
-      deleted from Firebase, remove it
-      from this phone automatically.
-    */
     removeSavedRoom(
       roomCode
     );
@@ -1463,6 +1449,88 @@ function renderTurnFeedback(
 
 
   /*
+    PROPERTY EMPIRE:
+    TOKEN SELECTION
+  */
+  if (
+    gameId === "property" &&
+    state.phase === "setup"
+  ) {
+    const ready =
+      state.setup?.[
+        mySlot + "Ready"
+      ];
+
+
+    if (ready) {
+      setTurnBanner(
+        "waiting",
+        "⏳",
+        "YOU'RE READY",
+        "Waiting for the other player…"
+      );
+    }
+
+    else {
+      setTurnBanner(
+        "yours",
+        "🎲",
+        "CHOOSE YOUR TOKEN",
+        "Pick a token and get ready"
+      );
+    }
+
+    return;
+  }
+
+
+  /*
+    PROPERTY EMPIRE:
+    NORMAL TURN
+  */
+  if (
+    gameId === "property"
+  ) {
+    const turn =
+      state.turn;
+
+
+    if (turn) {
+      $(
+        `#playerCard${turn}`
+      )
+        ?.classList
+        .add(
+          "my-turn"
+        );
+    }
+
+
+    if (turn === mySlot) {
+      setTurnBanner(
+        "yours",
+        "🎲",
+        "YOUR TURN",
+        "Make your move"
+      );
+    }
+
+    else {
+      setTurnBanner(
+        "waiting",
+        "⏳",
+        `${playerName(
+          turn
+        )}'S TURN`,
+        "Waiting for their move…"
+      );
+    }
+
+    return;
+  }
+
+
+  /*
     Traditional turn-based games.
   */
   if (
@@ -1619,7 +1687,19 @@ function renderGame() {
       game.name;
 
 
-  if (state.winner) {
+  if (
+    active.id === "property"
+  ) {
+    $("#turnLabel")
+      .textContent =
+        propertyTurnText(
+          state,
+          mySlot,
+          playerName
+        );
+  }
+
+  else if (state.winner) {
     $("#turnLabel")
       .textContent =
         winnerText(state);
@@ -1698,6 +1778,20 @@ function renderGame() {
       "wyr"
   ) {
     renderWYR(state);
+  }
+
+  else if (
+    active.id ===
+      "property"
+  ) {
+    renderPropertyGame({
+      state,
+      mySlot,
+      playerName,
+      mount:
+        $("#gameMount"),
+      pushState
+    });
   }
 
   else {
@@ -2514,7 +2608,6 @@ function renderRPS(state) {
       <div class="rps-reveal">
 
         <div class="rps-choice">
-
           <small>
             ${playerName("A")}
           </small>
@@ -2524,7 +2617,6 @@ function renderRPS(state) {
               state.picks.A
             )}
           </div>
-
         </div>
 
 
@@ -2532,7 +2624,6 @@ function renderRPS(state) {
 
 
         <div class="rps-choice">
-
           <small>
             ${playerName("B")}
           </small>
@@ -2542,7 +2633,6 @@ function renderRPS(state) {
               state.picks.B
             )}
           </div>
-
         </div>
 
       </div>
@@ -2823,10 +2913,6 @@ async function nextRpsRound(
 function currentWYRQuestion(
   state
 ) {
-  /*
-    Compatibility fallback for any WYR
-    match created before Phase 3.
-  */
   if (
     !Array.isArray(
       state.deck
@@ -3156,15 +3242,6 @@ async function nextWYRQuestion(
     );
 
 
-  /*
-    If this deck has somehow been
-    exhausted, create a brand-new
-    shuffled sequence.
-
-    No question repeats before every
-    question in the current deck has
-    been used.
-  */
   const nextPosition =
     (next.position || 0) + 1;
 
