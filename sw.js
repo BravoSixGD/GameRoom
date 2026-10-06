@@ -1,14 +1,22 @@
 /*
   GAME ROOM SERVICE WORKER
+  ------------------------
+  Network-first update strategy.
 
-  Goals:
-  - Check the network first for fresh files
-  - Keep an offline fallback
-  - Immediately activate new service workers
-  - Remove old caches automatically
+  - Always tries to load the newest files
+  - Uses cache when offline
+  - Activates updated service workers immediately
+  - Deletes old Game Room caches
+  - Avoids stale browser HTTP cache responses
 */
 
-const CACHE = "game-room-runtime-v1";
+const CACHE = "game-room-runtime-v2";
+
+
+/*
+  Files required for the app to work offline.
+  Add Scrabble files here when we build Scrabble.
+*/
 
 const CORE_FILES = [
   "./",
@@ -27,80 +35,131 @@ const CORE_FILES = [
 ];
 
 
-/* -----------------------------
+/* =========================================
    INSTALL
------------------------------ */
+========================================= */
 
 self.addEventListener(
   "install",
   event => {
 
+    /*
+      Don't leave the new service worker
+      waiting for the old one to disappear.
+    */
+
     self.skipWaiting();
+
 
     event.waitUntil(
       caches
         .open(CACHE)
-        .then(cache =>
-          cache.addAll(CORE_FILES)
-        )
+        .then(async cache => {
+
+          /*
+            Cache files individually.
+
+            This means one missing optional
+            file won't cause the entire
+            service worker installation
+            to fail.
+          */
+
+          await Promise.allSettled(
+            CORE_FILES.map(file =>
+              cache.add(
+                new Request(
+                  file,
+                  {
+                    cache: "reload"
+                  }
+                )
+              )
+            )
+          );
+
+        })
     );
   }
 );
 
 
-/* -----------------------------
+/* =========================================
    ACTIVATE
------------------------------ */
+========================================= */
 
 self.addEventListener(
   "activate",
   event => {
 
     event.waitUntil(
-      caches
-        .keys()
-        .then(keys =>
-          Promise.all(
-            keys
-              .filter(
-                key =>
-                  key !== CACHE
-              )
-              .map(
-                key =>
-                  caches.delete(key)
-              )
-          )
-        )
-        .then(() =>
-          self.clients.claim()
-        )
+      (async () => {
+
+        /*
+          Delete old Game Room caches.
+        */
+
+        const keys =
+          await caches.keys();
+
+
+        await Promise.all(
+          keys
+            .filter(
+              key =>
+                key.startsWith(
+                  "game-room-"
+                ) &&
+                key !== CACHE
+            )
+            .map(
+              key =>
+                caches.delete(key)
+            )
+        );
+
+
+        /*
+          Immediately control existing
+          Game Room windows/PWA instances.
+        */
+
+        await self.clients.claim();
+
+      })()
     );
   }
 );
 
 
-/* -----------------------------
-   ALLOW APP TO FORCE UPDATE
------------------------------ */
+/* =========================================
+   MESSAGE HANDLER
+========================================= */
 
 self.addEventListener(
   "message",
   event => {
 
+    /*
+      app.js can send this message when
+      it discovers a waiting update.
+    */
+
     if (
       event.data?.type ===
       "SKIP_WAITING"
     ) {
+
       self.skipWaiting();
+
     }
   }
 );
 
 
-/* -----------------------------
+/* =========================================
    FETCH
------------------------------ */
+========================================= */
 
 self.addEventListener(
   "fetch",
@@ -109,6 +168,14 @@ self.addEventListener(
     const request =
       event.request;
 
+
+    /*
+      Only handle GET requests.
+
+      Firebase/API POST requests etc.
+      should pass through normally.
+    */
+
     if (
       request.method !== "GET"
     ) {
@@ -116,88 +183,169 @@ self.addEventListener(
     }
 
 
-    /*
-      PAGE NAVIGATION
+    const requestURL =
+      new URL(request.url);
 
-      Always try the newest
-      index.html first.
+
+    /*
+      Don't interfere with Firebase,
+      Google APIs or other third-party
+      resources.
+
+      Only cache files belonging to
+      Game Room itself.
     */
+
+    if (
+      requestURL.origin !==
+      self.location.origin
+    ) {
+      return;
+    }
+
+
+    /* =====================================
+       PAGE NAVIGATION
+
+       index.html is NETWORK FIRST.
+    ===================================== */
 
     if (
       request.mode === "navigate"
     ) {
 
       event.respondWith(
-        fetch(request)
-          .then(response => {
+        (async () => {
 
-            const copy =
-              response.clone();
+          try {
 
-            event.waitUntil(
-              caches
-                .open(CACHE)
-                .then(cache =>
-                  cache.put(
-                    "./index.html",
-                    copy
+            /*
+              cache: "no-store"
+
+              This is important.
+
+              It tells the browser not to
+              satisfy this request from its
+              normal HTTP cache.
+
+              We want the actual server.
+            */
+
+            const response =
+              await fetch(
+                request,
+                {
+                  cache: "no-store"
+                }
+              );
+
+
+            if (
+              response &&
+              response.ok
+            ) {
+
+              const copy =
+                response.clone();
+
+
+              event.waitUntil(
+                caches
+                  .open(CACHE)
+                  .then(cache =>
+                    cache.put(
+                      "./index.html",
+                      copy
+                    )
                   )
-                )
-            );
+              );
+
+            }
+
 
             return response;
-          })
-          .catch(() =>
-            caches.match(
-              "./index.html"
-            )
-          )
+
+          }
+
+          catch (error) {
+
+            /*
+              No internet?
+
+              Open the most recently cached
+              Game Room page.
+            */
+
+            const cached =
+              await caches.match(
+                "./index.html"
+              );
+
+
+            if (cached) {
+              return cached;
+            }
+
+
+            return Response.error();
+
+          }
+
+        })()
       );
+
 
       return;
     }
 
 
-    /*
-      JS / CSS / JSON / OTHER FILES
+    /* =====================================
+       APP FILES
 
-      Network first.
+       JavaScript
+       CSS
+       JSON
+       images
+       fonts
+       etc.
 
-      Therefore a deployed update
-      is used immediately whenever
-      internet is available.
-
-      Cache is only the fallback.
-    */
+       NETWORK FIRST.
+    ===================================== */
 
     event.respondWith(
-      fetch(request, {
-  cache: "no-store"
-})
-        .then(response => {
+      (async () => {
 
-          if (
-            !response ||
-            response.status !== 200
-          ) {
-            return response;
-          }
+        try {
 
           /*
-            Don't attempt to cache
-            third-party requests.
+            Again bypass the browser's
+            ordinary HTTP cache.
+
+            We want the newest server
+            response whenever online.
           */
 
-          const requestURL =
-            new URL(request.url);
+          const response =
+            await fetch(
+              request,
+              {
+                cache: "no-store"
+              }
+            );
+
+
+          /*
+            Only save successful responses.
+          */
 
           if (
-            requestURL.origin ===
-            self.location.origin
+            response &&
+            response.ok
           ) {
 
             const copy =
               response.clone();
+
 
             event.waitUntil(
               caches
@@ -209,38 +357,67 @@ self.addEventListener(
                   )
                 )
             );
+
           }
 
-          return response;
-        })
 
-        .catch(async () => {
+          return response;
+
+        }
+
+        catch (error) {
+
+          /*
+            Network unavailable.
+
+            Try the exact cached request
+            first.
+          */
 
           const cached =
             await caches.match(
               request
             );
 
+
           if (cached) {
             return cached;
           }
 
+
           /*
-            Navigation fallback,
-            just in case.
+            Query-string fallback.
+
+            Example:
+
+            app.js?v=1.5.1
+
+            If we're offline but previously
+            only cached app.js, try matching
+            while ignoring the query string.
           */
 
-          if (
-            request.destination ===
-            "document"
-          ) {
-            return caches.match(
-              "./index.html"
+          const cachedWithoutQuery =
+            await caches.match(
+              request,
+              {
+                ignoreSearch: true
+              }
             );
+
+
+          if (
+            cachedWithoutQuery
+          ) {
+            return cachedWithoutQuery;
           }
 
+
           return Response.error();
-        })
+
+        }
+
+      })()
     );
   }
 );
