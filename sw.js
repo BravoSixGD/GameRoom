@@ -171,7 +171,9 @@ self.addEventListener(
     */
 
     event.respondWith(
-      fetch(request)
+      fetch(request, {
+  cache: "no-store"
+})
         .then(response => {
 
           if (
