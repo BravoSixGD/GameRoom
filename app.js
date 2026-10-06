@@ -36,7 +36,7 @@ const reactions = ["❤️", "😂", "😭", "😡", "👏"];
 const STORAGE_ROOMS = "gameRoom.savedRooms.v1";
 const STORAGE_THEME = "gameRoom.theme.v1";
 
-
+const APP_VERSION = "1.5.0";
 /* --------------------------------------------------
    WOULD YOU RATHER QUESTION BANK
 -------------------------------------------------- */
