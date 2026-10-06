@@ -603,7 +603,13 @@ async function openSavedRoom(code) {
 
 async function boot() {
   loadTheme();
+const versionElement =
+  document.querySelector("#appVersion");
 
+if (versionElement) {
+  versionElement.textContent =
+    `Version ${APP_VERSION}`;
+}
   renderTiles();
   renderReactions();
   renderSavedRooms();
