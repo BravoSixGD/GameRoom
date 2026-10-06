@@ -623,8 +623,10 @@ async function boot() {
   }
 
 
-  if ("serviceWorker" in navigator) {
+ if ("serviceWorker" in navigator) {
+
   try {
+
     const registration =
       await navigator.serviceWorker.register(
         "./sw.js",
@@ -633,21 +635,41 @@ async function boot() {
         }
       );
 
-    // Ask the browser to check the server
-    // for a newer service worker now.
-    await registration.update();
 
-    // A new worker may already be waiting.
-    if (registration.waiting) {
-      registration.waiting.postMessage({
-        type: "SKIP_WAITING"
-      });
+    /*
+      Check for a newer sw.js
+      every time Game Room starts.
+    */
+
+    registration
+      .update()
+      .catch(() => {});
+
+
+    /*
+      If an update is already
+      waiting, activate it.
+    */
+
+    if (
+      registration.waiting
+    ) {
+      registration.waiting
+        .postMessage({
+          type: "SKIP_WAITING"
+        });
     }
 
-    // Watch for a newly downloaded worker.
+
+    /*
+      Detect an update downloaded
+      while the app is open.
+    */
+
     registration.addEventListener(
       "updatefound",
       () => {
+
         const worker =
           registration.installing;
 
@@ -656,12 +678,18 @@ async function boot() {
         worker.addEventListener(
           "statechange",
           () => {
+
             if (
-              worker.state === "installed" &&
-              navigator.serviceWorker.controller
+              worker.state ===
+                "installed" &&
+              navigator
+                .serviceWorker
+                .controller
             ) {
+
               worker.postMessage({
-                type: "SKIP_WAITING"
+                type:
+                  "SKIP_WAITING"
               });
             }
           }
@@ -669,27 +697,39 @@ async function boot() {
       }
     );
 
-    // Reload when the new service worker
-    // takes control.
-    let refreshing = false;
 
-    navigator.serviceWorker.addEventListener(
-      "controllerchange",
-      () => {
-        if (refreshing) return;
+    /*
+      Once the new service worker
+      controls the page, reload once.
+    */
 
-        refreshing = true;
+    let reloading = false;
 
-        location.reload();
-      }
-    );
+    navigator
+      .serviceWorker
+      .addEventListener(
+        "controllerchange",
+        () => {
+
+          if (reloading) {
+            return;
+          }
+
+          reloading = true;
+
+          window.location.reload();
+        }
+      );
+
   }
 
   catch (error) {
+
     console.warn(
-      "Service worker update check failed:",
+      "Service worker registration failed:",
       error
     );
+
   }
 }
 }
