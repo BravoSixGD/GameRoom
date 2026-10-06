@@ -623,13 +623,75 @@ async function boot() {
   }
 
 
-  if (
-    "serviceWorker" in navigator
-  ) {
-    navigator.serviceWorker
-      .register("./sw.js")
-      .catch(() => {});
+  if ("serviceWorker" in navigator) {
+  try {
+    const registration =
+      await navigator.serviceWorker.register(
+        "./sw.js",
+        {
+          updateViaCache: "none"
+        }
+      );
+
+    // Ask the browser to check the server
+    // for a newer service worker now.
+    await registration.update();
+
+    // A new worker may already be waiting.
+    if (registration.waiting) {
+      registration.waiting.postMessage({
+        type: "SKIP_WAITING"
+      });
+    }
+
+    // Watch for a newly downloaded worker.
+    registration.addEventListener(
+      "updatefound",
+      () => {
+        const worker =
+          registration.installing;
+
+        if (!worker) return;
+
+        worker.addEventListener(
+          "statechange",
+          () => {
+            if (
+              worker.state === "installed" &&
+              navigator.serviceWorker.controller
+            ) {
+              worker.postMessage({
+                type: "SKIP_WAITING"
+              });
+            }
+          }
+        );
+      }
+    );
+
+    // Reload when the new service worker
+    // takes control.
+    let refreshing = false;
+
+    navigator.serviceWorker.addEventListener(
+      "controllerchange",
+      () => {
+        if (refreshing) return;
+
+        refreshing = true;
+
+        location.reload();
+      }
+    );
   }
+
+  catch (error) {
+    console.warn(
+      "Service worker update check failed:",
+      error
+    );
+  }
+}
 }
 
 
